@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { PaymentMethod, PaymentStatus, OrderType } from "@prisma/client";
+import { PaymentMethod, PaymentStatus, OrderType, MemberTier } from "@prisma/client";
 
 interface CartItem {
   productId: string;
@@ -22,13 +22,51 @@ interface CheckoutData {
   tax: number;
   subtotal: number;
   netTotal: number;
+  rewardType?: string; 
 }
 
 export async function processCheckout(data: CheckoutData) {
   try {
-    // ใช้ Transaction เพื่อความปลอดภัยของข้อมูล (กฎข้อ 49 และ 64)
     const result = await prisma.$transaction(async (tx) => {
-      // 1. สร้าง Order
+      // 1. ตรวจสอบและหักแต้มสะสมกรณีมีการแลกสิทธิพิเศษ
+      if (data.customerId && data.rewardType) {
+        let pointsToDeduct = 0;
+        let redeemDescription = "";
+
+        if (data.rewardType === "discount_20") {
+          pointsToDeduct = 250;
+          redeemDescription = "แลกแต้มรับส่วนลด 20 บาท";
+        } else if (data.rewardType === "free_doll") {
+          pointsToDeduct = 1000;
+          redeemDescription = "แลกแต้มรับตุ๊กตา Xiumei ฟรี";
+        }
+
+        if (pointsToDeduct > 0) {
+          const customer = await tx.customer.findUnique({
+            where: { id: data.customerId },
+          });
+
+          if (!customer || customer.points < pointsToDeduct) {
+            throw new Error("แต้มสะสมของลูกค้าไม่เพียงพอสำหรับการแลกสิทธิ์");
+          }
+
+          // หักแต้มลูกค้าและบันทึกประวัติ
+          await tx.customer.update({
+            where: { id: data.customerId },
+            data: { points: { decrement: pointsToDeduct } },
+          });
+
+          await tx.pointTransaction.create({
+            data: {
+              customerId: data.customerId,
+              points: -pointsToDeduct,
+              description: redeemDescription,
+            },
+          });
+        }
+      }
+
+      // 2. สร้าง Order พร้อมรายละเอียด
       const order = await tx.order.create({
         data: {
           employeeId: data.employeeId,
@@ -40,25 +78,24 @@ export async function processCheckout(data: CheckoutData) {
           tax: data.tax,
           netTotal: data.netTotal,
           paymentMethod: data.paymentMethod,
-          paymentStatus: PaymentStatus.PAID, // ชำระเงินสำเร็จทันที
+          paymentStatus: PaymentStatus.PAID,
         },
       });
 
-      // 2. สร้าง Order Details และตัด Stock สินค้า
+      // 3. จัดการรายการสินค้า ตัดสต๊อก และบันทึกประวัติสต๊อก
       for (const item of data.items) {
-        // ตรวจสอบ Stock ปัจจุบัน
         const product = await tx.product.findUnique({
           where: { id: item.productId },
         });
 
         if (!product || product.stockQty < item.quantity) {
-          throw new Error(`สินค้า ${product?.name || item.productId} มีสต๊อกไม่เพียงพอ`);
+          throw new Error(`สินค้าสต๊อกไม่เพียงพอ`);
         }
 
         const stockBefore = product.stockQty;
         const stockAfter = stockBefore - item.quantity;
 
-        // สร้าง Order Detail
+        // บันทึกรายการลงบิล
         await tx.orderDetail.create({
           data: {
             orderId: order.id,
@@ -70,7 +107,7 @@ export async function processCheckout(data: CheckoutData) {
           },
         });
 
-        // ตัด Stock สินค้า
+        // อัปเดตยอดและสถานะสต๊อก
         await tx.product.update({
           where: { id: item.productId },
           data: { 
@@ -79,7 +116,7 @@ export async function processCheckout(data: CheckoutData) {
           },
         });
 
-        // บันทึก Stock Movement (กฎข้อ 10)
+        // บันทึกความเคลื่อนไหว (Stock Movement)
         await tx.stockMovement.create({
           data: {
             productId: item.productId,
@@ -87,27 +124,48 @@ export async function processCheckout(data: CheckoutData) {
             quantity: item.quantity,
             stockBefore,
             stockAfter,
-            reason: `ขายหน้าร้าน Order ID: ${order.id}`,
+            reason: `ขายหน้าร้าน (บิล #${order.id.slice(-6).toUpperCase()})`,
             employeeId: data.employeeId,
           },
         });
       }
 
-      // 3. ถ้ามีลูกค้าสมาชิก ให้บวกแต้มสะสม (กฎข้อ 21: ทุก 10 บาท = 1 แต้ม)
+      // 4. สะสมแต้มและอัปเดตระดับสมาชิก (Tier)
       if (data.customerId) {
-        const earnedPoints = Math.floor(Number(data.netTotal) / 10);
-        if (earnedPoints > 0) {
-          await tx.customer.update({
-            where: { id: data.customerId },
-            data: { points: { increment: earnedPoints } },
-          });
+        // ทุกยอดซื้อ 2 บาท = 1 แต้ม
+        const earnedPoints = Math.floor(Number(data.netTotal) / 2);
 
+        const updatedCustomer = await tx.customer.update({
+          where: { id: data.customerId },
+          data: {
+            points: { increment: earnedPoints },
+            totalSpent: { increment: data.netTotal },
+          },
+        });
+
+        if (earnedPoints > 0) {
           await tx.pointTransaction.create({
             data: {
               customerId: data.customerId,
               points: earnedPoints,
-              description: `ได้รับแต้มจากการซื้อสินค้า Order: ${order.id}`,
+              description: `ได้รับแต้มจากการซื้อสินค้า (บิล #${order.id.slice(-6).toUpperCase()})`,
             },
+          });
+        }
+
+        // ตรวจสอบเพื่ออัปเกรดสถานะสมาชิก
+        const spent = Number(updatedCustomer.totalSpent);
+        let newTier: MemberTier = MemberTier.GENERAL;
+        if (spent >= 10000) {
+          newTier = MemberTier.PLATINUM;
+        } else if (spent >= 3000) {
+          newTier = MemberTier.GOLD;
+        }
+
+        if (newTier !== updatedCustomer.tier) {
+          await tx.customer.update({
+            where: { id: data.customerId },
+            data: { tier: newTier },
           });
         }
       }
@@ -115,10 +173,12 @@ export async function processCheckout(data: CheckoutData) {
       return order;
     });
 
+    // รีเฟรชข้อมูลที่เกี่ยวข้องในระบบทั้งหมด
+    revalidatePath("/pos");
     revalidatePath("/orders");
-    revalidatePath("/inventory");
-    revalidatePath("/dashboard");
-
+    revalidatePath("/members");
+    revalidatePath("/promotions");
+    
     return { success: true, orderId: result.id };
   } catch (error: any) {
     console.error("Checkout error:", error);

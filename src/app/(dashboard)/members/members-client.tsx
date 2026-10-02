@@ -11,8 +11,9 @@ export default function MembersClient({ initialMembers }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // แก้ไข formData จาก memberTier เป็น tier ให้ตรงกับ Database
   const [formData, setFormData] = useState({
-    name: "", phone: "", memberTier: "GENERAL", points: 0
+    name: "", phone: "", tier: "GENERAL", points: 0
   });
 
   const filteredMembers = initialMembers.filter((m: any) => 
@@ -26,12 +27,12 @@ export default function MembersClient({ initialMembers }: any) {
       setFormData({
         name: member.name,
         phone: member.phone,
-        memberTier: member.memberTier,
+        tier: member.tier, // ใช้ tier
         points: member.points,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: "", phone: "", memberTier: "GENERAL", points: 0 });
+      setFormData({ name: "", phone: "", tier: "GENERAL", points: 0 });
     }
     setIsModalOpen(true);
   };
@@ -61,7 +62,6 @@ export default function MembersClient({ initialMembers }: any) {
     }
   };
 
-  // ตกแต่งป้าย Tier ของสมาชิก
   const getTierBadge = (tier: string) => {
     switch (tier) {
       case "PLATINUM": 
@@ -89,7 +89,6 @@ export default function MembersClient({ initialMembers }: any) {
         </button>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-pink-50 text-[#E85D75] flex items-center justify-center">
@@ -107,7 +106,7 @@ export default function MembersClient({ initialMembers }: any) {
           <div>
             <p className="text-sm text-gray-500">สมาชิก Gold & Platinum</p>
             <p className="text-2xl font-bold text-[#361F4D]">
-              {initialMembers.filter((m: any) => m.memberTier !== "GENERAL").length} <span className="text-sm font-normal text-gray-400">ราย</span>
+              {initialMembers.filter((m: any) => m.tier !== "GENERAL").length} <span className="text-sm font-normal text-gray-400">ราย</span>
             </p>
           </div>
         </div>
@@ -145,6 +144,7 @@ export default function MembersClient({ initialMembers }: any) {
                 <th className="px-6 py-4 font-medium">ชื่อลูกค้า</th>
                 <th className="px-6 py-4 font-medium">เบอร์โทรศัพท์</th>
                 <th className="px-6 py-4 font-medium text-center">ระดับสมาชิก</th>
+                <th className="px-6 py-4 font-medium text-right">ยอดซื้อสะสม</th>
                 <th className="px-6 py-4 font-medium text-right">แต้มสะสม</th>
                 <th className="px-6 py-4 font-medium text-center">ประวัติการซื้อ</th>
                 <th className="px-6 py-4 font-medium text-right">จัดการ</th>
@@ -155,7 +155,9 @@ export default function MembersClient({ initialMembers }: any) {
                 <tr key={m.id} className="text-[#361F4D] hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4 font-semibold">{m.name}</td>
                   <td className="px-6 py-4 text-gray-600 font-mono text-xs">{m.phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}</td>
-                  <td className="px-6 py-4 text-center">{getTierBadge(m.memberTier)}</td>
+                  <td className="px-6 py-4 text-center">{getTierBadge(m.tier)}</td>
+                  {/* เพิ่มบรรทัดแสดงยอดซื้อสะสมให้สมบูรณ์ */}
+                  <td className="px-6 py-4 text-right font-medium">฿{Number(m.totalSpent || 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-right font-bold text-[#E85D75]">{m.points.toLocaleString()}</td>
                   <td className="px-6 py-4 text-center text-gray-500">{m._count.orders} บิล</td>
                   <td className="px-6 py-4">
@@ -168,7 +170,7 @@ export default function MembersClient({ initialMembers }: any) {
               ))}
               {filteredMembers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
                     ไม่พบข้อมูลสมาชิกลูกค้า
                   </td>
                 </tr>
@@ -178,7 +180,6 @@ export default function MembersClient({ initialMembers }: any) {
         </div>
       </div>
 
-      {/* Modal เพิ่ม/แก้ไขสมาชิก */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
@@ -200,7 +201,7 @@ export default function MembersClient({ initialMembers }: any) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">ระดับสมาชิก <span className="text-red-500">*</span></label>
-                <select required value={formData.memberTier} onChange={(e) => setFormData({...formData, memberTier: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-[#E85D75] focus:outline-none">
+                <select required value={formData.tier} onChange={(e) => setFormData({...formData, tier: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-[#E85D75] focus:outline-none">
                   <option value="GENERAL">ทั่วไป (General)</option>
                   <option value="GOLD">Gold</option>
                   <option value="PLATINUM">Platinum</option>

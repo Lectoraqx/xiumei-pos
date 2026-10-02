@@ -70,18 +70,19 @@ enum MovementType {
 }
 
 model Employee {
-  id             String           @id @default(cuid()) @map("employee_id")
-  firstName      String           @map("first_name")
-  lastName       String           @map("last_name")
-  email          String           @unique
-  passwordHash   String           @map("password_hash")
-  role           Role             @default(CASHIER)
+  id             String          @id @default(cuid()) @map("employee_id")
+  firstName      String          @map("first_name")
+  lastName       String          @map("last_name")
+  email          String          @unique
+  passwordHash   String          @map("password_hash")
+  role           Role            @default(CASHIER)
   phone          String?
-  hireDate       DateTime         @default(now()) @map("hire_date")
-  status         EmployeeStatus   @default(ACTIVE)
+  hireDate       DateTime        @default(now()) @map("hire_date")
+  status         EmployeeStatus  @default(ACTIVE)
   orders         Order[]
   wasteLogs      WasteLog[]
   stockMovements StockMovement[]
+
   @@map("employees")
 }
 
@@ -90,6 +91,7 @@ model Category {
   name        String    @map("category_name")
   description String?   @db.Text
   products    Product[]
+
   @@map("categories")
 }
 
@@ -98,42 +100,47 @@ model Supplier {
   name        String    @map("supplier_name")
   contactName String?   @map("contact_name")
   phone       String?
-  email       String?   
+  email       String?
   address     String?   @db.Text
   products    Product[]
+
   @@map("suppliers")
 }
 
 model Product {
-  id           String        @id @default(cuid()) @map("product_id")
-  categoryId   String        @map("category_id")
-  supplierId   String?       @map("supplier_id")
-  name         String        @map("product_name")
-  unitType     String        @map("unit_type")
-  costPrice    Decimal       @map("cost_price") @db.Decimal(10, 2)
-  sellingPrice Decimal       @map("selling_price") @db.Decimal(10, 2)
-  stockQty     Int           @default(0) @map("stock_qty")
-  minStock     Int           @default(0) @map("min_stock")
-  status       ProductStatus @default(AVAILABLE)
-  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  supplier     Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  orderDetails OrderDetail[]
+  id             String          @id @default(cuid()) @map("product_id")
+  categoryId     String          @map("category_id")
+  supplierId     String?         @map("supplier_id")
+  name           String          @map("product_name")
+  unitType       String          @map("unit_type")
+  costPrice      Decimal         @map("cost_price") @db.Decimal(10, 2)
+  sellingPrice   Decimal         @map("selling_price") @db.Decimal(10, 2)
+  stockQty       Int             @default(0) @map("stock_qty")
+  minStock       Int             @default(0) @map("min_stock")
+  status         ProductStatus   @default(AVAILABLE)
+  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  orderDetails   OrderDetail[]
   wasteLogs      WasteLog[]
   stockMovements StockMovement[]
+
   @@index([categoryId])
   @@index([supplierId])
   @@map("products")
 }
 
 model Customer {
-  id           String       @id @default(cuid()) @map("customer_id")
-  phone        String       @unique @map("phone_number")
-  name         String       @map("customer_name")
-  memberTier   MemberTier   @default(GENERAL) @map("member_tier")
-  points       Int          @default(0)
-  registerDate DateTime     @default(now()) @map("register_date")
+  id                String             @id @default(cuid()) @map("customer_id")
+  name              String             @map("customer_name")
+  phone             String             @unique @map("phone_number")
+  tier              MemberTier         @default(GENERAL) @map("member_tier")
+  points            Int                @default(0)
+  totalSpent        Decimal            @default(0) @map("total_spent") @db.Decimal(10, 2)
   orders            Order[]
   pointTransactions PointTransaction[]
+  createdAt         DateTime           @default(now()) @map("register_date")
+  updatedAt         DateTime?          @updatedAt @map("updated_at")
+
   @@map("customers")
 }
 
@@ -145,7 +152,8 @@ model Promotion {
   startDate     DateTime     @map("start_date")
   endDate       DateTime     @map("end_date")
   status        PromoStatus  @default(ACTIVE)
-  orders Order[]
+  orders        Order[]
+
   @@map("promotions")
 }
 
@@ -166,6 +174,7 @@ model Order {
   customer      Customer?     @relation(fields: [customerId], references: [id])
   promotion     Promotion?    @relation(fields: [promoId], references: [id])
   details       OrderDetail[]
+
   @@index([employeeId])
   @@index([customerId])
   @@index([orderDate])
@@ -173,15 +182,16 @@ model Order {
 }
 
 model OrderDetail {
-  id         String  @id @default(cuid()) @map("detail_id")
-  orderId    String  @map("order_id")
-  productId  String  @map("product_id")
+  id         String   @id @default(cuid()) @map("detail_id")
+  orderId    String   @map("order_id")
+  productId  String   @map("product_id")
   quantity   Int
-  unitPrice  Decimal @map("unit_price") @db.Decimal(10, 2)
-  totalPrice Decimal @map("total_price") @db.Decimal(10, 2)
-  note       String? @db.Text
-  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product    Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+  totalPrice Decimal  @map("total_price") @db.Decimal(10, 2)
+  note       String?  @db.Text
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
   @@index([orderId])
   @@index([productId])
   @@map("order_details")
@@ -197,33 +207,52 @@ model WasteLog {
   costLost     Decimal  @map("cost_lost") @db.Decimal(10, 2)
   product      Product  @relation(fields: [productId], references: [id])
   employee     Employee @relation(fields: [employeeId], references: [id])
+
   @@index([productId])
   @@map("waste_logs")
 }
 
 model StockMovement {
-  id           String       @id @default(cuid()) @map("movement_id")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  productId    String       @map("product_id")
-  type         MovementType
-  quantity     Int
-  stockBefore  Int          @map("stock_before")
-  stockAfter   Int          @map("stock_after")
-  reason       String?      @db.Text
-  employeeId   String       @map("employee_id")
-  product      Product      @relation(fields: [productId], references: [id])
-  employee     Employee     @relation(fields: [employeeId], references: [id])
+  id          String       @id @default(cuid()) @map("movement_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  productId   String       @map("product_id")
+  type        MovementType
+  quantity    Int
+  stockBefore Int          @map("stock_before")
+  stockAfter  Int          @map("stock_after")
+  reason      String?      @db.Text
+  employeeId  String       @map("employee_id")
+  product     Product      @relation(fields: [productId], references: [id])
+  employee    Employee     @relation(fields: [employeeId], references: [id])
+
   @@index([productId])
   @@map("stock_movements")
 }
 
 model PointTransaction {
-  id           String   @id @default(cuid()) @map("transaction_id")
-  customerId   String   @map("customer_id")
-  points       Int      
-  description  String
-  createdAt    DateTime @default(now()) @map("created_at")
-  customer     Customer @relation(fields: [customerId], references: [id])
+  id          String   @id @default(cuid()) @map("transaction_id")
+  customerId  String   @map("customer_id")
+  points      Int
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+  customer    Customer @relation(fields: [customerId], references: [id])
+
   @@index([customerId])
   @@map("point_transactions")
+}
+enum RewardType {
+  DISCOUNT
+  FREE_ITEM
+}
+
+model Reward {
+  id             String     @id @default(cuid()) @map("reward_id")
+  name           String     @map("reward_name")
+  pointsRequired Int        @map("points_required")
+  rewardType     RewardType @map("reward_type")
+  discountValue  Decimal?   @map("discount_value") @db.Decimal(10, 2)
+  isActive       Boolean    @default(true) @map("is_active")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  @@map("rewards")
 }

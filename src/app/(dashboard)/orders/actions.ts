@@ -11,7 +11,7 @@ export async function processCheckout(cart: any[]) {
       return { success: false, error: "ไม่พบข้อมูลพนักงานในระบบ กรุณาล็อกอินใหม่" }
     }
 
-    // คำนวณยอดรวมอีกครั้งฝั่งเซิร์ฟเวอร์เพื่อความปลอดภัย
+    // คำนวณยอดรวมอีกครั้งฝั่งเซิร์ฟเวอร์เพื่อความปลอดภัย (เติมเครื่องหมายคูณ *)
     const netTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0)
 
     // 2. ใช้ Transaction บันทึกข้อมูลและตัดสต็อกพร้อมกัน
@@ -32,7 +32,7 @@ export async function processCheckout(cart: any[]) {
               productId: item.id,
               quantity: item.qty,
               unitPrice: item.price,
-              totalPrice: item.price * item.qty,
+              totalPrice: item.price * item.qty, // เติมเครื่องหมายคูณ *
             }))
           }
         }

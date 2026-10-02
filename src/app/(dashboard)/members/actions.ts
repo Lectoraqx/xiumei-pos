@@ -8,9 +8,9 @@ export async function getMembers() {
   try {
     return await prisma.customer.findMany({
       include: {
-        _count: { select: { orders: true } }, // นับจำนวนบิลของลูกค้ารายนี้
+        _count: { select: { orders: true } },
       },
-      orderBy: { registerDate: 'desc' },
+      orderBy: { createdAt: 'desc' }, // แก้จาก registerDate เป็น createdAt
     });
   } catch (error) {
     console.error("Error fetching members:", error);
@@ -20,7 +20,6 @@ export async function getMembers() {
 
 export async function saveMember(data: any, id?: string) {
   try {
-    // เช็คเบอร์โทรซ้ำ
     const existing = await prisma.customer.findUnique({
       where: { phone: data.phone },
     });
@@ -32,7 +31,7 @@ export async function saveMember(data: any, id?: string) {
     const memberData = {
       name: data.name,
       phone: data.phone,
-      memberTier: data.memberTier as MemberTier,
+      tier: data.tier as MemberTier, // แก้จาก memberTier เป็น tier
       points: Number(data.points) || 0,
     };
 
@@ -43,7 +42,7 @@ export async function saveMember(data: any, id?: string) {
     }
 
     revalidatePath("/members");
-    revalidatePath("/pos"); // ควรอัปเดตหน้า POS ด้วยเพราะต้องดึงลูกค้าไปเลือก
+    revalidatePath("/pos");
     return { success: true };
   } catch (error) {
     console.error("Save member error:", error);
@@ -53,7 +52,6 @@ export async function saveMember(data: any, id?: string) {
 
 export async function deleteMember(id: string) {
   try {
-    // กฎข้อ 30: ห้ามลบ Customer ที่มี Order
     const orderCount = await prisma.order.count({ where: { customerId: id } });
     if (orderCount > 0) {
       return { success: false, error: `ไม่สามารถลบได้ เนื่องจากลูกค้ารายนี้มีประวัติการซื้อ ${orderCount} บิล` };

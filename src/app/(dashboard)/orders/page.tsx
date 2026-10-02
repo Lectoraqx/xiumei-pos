@@ -11,9 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClipboardList } from "lucide-react"
 
 export default async function OrderHistoryPage() {
+  // ดึงข้อมูลออเดอร์พร้อมข้อมูลพนักงาน ลูกค้า และรายละเอียดสินค้า
   const orders = await prisma.order.findMany({
     include: {
       employee: true,
+      customer: true, // เพิ่มการดึงข้อมูลลูกค้า
       details: {
         include: { product: true }
       }
@@ -43,40 +45,47 @@ export default async function OrderHistoryPage() {
               <TableRow>
                 <TableHead className="font-medium text-gray-500">รหัสออเดอร์</TableHead>
                 <TableHead className="font-medium text-gray-500">วันที่ / เวลา</TableHead>
+                <TableHead className="font-medium text-gray-500">ลูกค้า</TableHead>
                 <TableHead className="font-medium text-gray-500">พนักงานผู้ทำรายการ</TableHead>
                 <TableHead className="font-medium text-gray-500">รายการสินค้า</TableHead>
                 <TableHead className="font-medium text-gray-500 text-right">ยอดสุทธิ</TableHead>
-                <TableHead className="font-medium text-gray-500">สถานะ</TableHead>
+                <TableHead className="font-medium text-gray-500 text-center">สถานะ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-50">
-              {/* เติม : any ตรงนี้เพื่อแก้ Error 7006 */}
-              {orders.map((order: any) => (
+              {/* ลบ : any ออก ปล่อยให้ TypeScript อ่าน Type อัตโนมัติจาก Prisma */}
+              {orders.map((order) => (
                 <TableRow key={order.id} className="text-[#361F4D] hover:bg-gray-50/50">
-                  <TableCell className="font-mono text-xs font-semibold">{order.id.substring(0, 10)}...</TableCell>
-                  <TableCell className="text-gray-500">
+                  <TableCell className="font-mono text-xs font-bold">
+                    {order.id.substring(0, 10).toUpperCase()}
+                  </TableCell>
+                  <TableCell className="text-gray-500 text-xs">
                     {new Date(order.orderDate).toLocaleString("th-TH", {
                       dateStyle: "short",
                       timeStyle: "short",
                     })}
                   </TableCell>
-                  <TableCell>{order.employee.firstName} {order.employee.lastName}</TableCell>
+                  <TableCell className="text-sm font-medium">
+                    {order.customer ? order.customer.name : <span className="text-gray-400 italic">ลูกค้าทั่วไป</span>}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {order.employee.firstName} {order.employee.lastName}
+                  </TableCell>
                   <TableCell>
                     <div className="text-xs space-y-1">
-                      {/* เติม : any ตรงนี้เพื่อแก้ Error 7006 */}
-                      {order.details.map((detail: any) => (
+                      {order.details.map((detail) => (
                         <div key={detail.id} className="text-gray-600">
-                          • {detail.product.name} (x{detail.quantity})
+                          • {detail.product.name} <span className="text-[#E85D75] font-bold">(x{detail.quantity})</span>
                         </div>
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-bold text-[#361F4D]">
+                  <TableCell className="text-right font-extrabold text-[#E85D75]">
                     ฿{Number(order.netTotal).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell>
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600">
-                      {order.paymentStatus}
+                  <TableCell className="text-center">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                      {order.paymentStatus === 'PAID' ? 'ชำระแล้ว' : order.paymentStatus}
                     </span>
                   </TableCell>
                 </TableRow>
@@ -84,7 +93,7 @@ export default async function OrderHistoryPage() {
 
               {orders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-gray-400">
+                  <TableCell colSpan={7} className="text-center py-12 text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <ClipboardList size={32} className="text-gray-300" />
                       <p>ยังไม่มีประวัติการขายในระบบ</p>
