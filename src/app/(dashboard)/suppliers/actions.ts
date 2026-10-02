@@ -23,7 +23,6 @@ export async function saveSupplier(data: any, id?: string) {
       name: data.name,
       contactName: data.contactName || null,
       phone: data.phone || null,
-      email: data.email || null,
       address: data.address || null,
     };
 

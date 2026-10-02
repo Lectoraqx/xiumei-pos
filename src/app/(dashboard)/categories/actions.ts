@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-// ดึงข้อมูลทั้งหมด (ฟังก์ชันที่หาไม่เจอ)
+// ดึงข้อมูลทั้งหมด
 export async function getCategories() {
   try {
     return await prisma.category.findMany({
@@ -40,5 +40,19 @@ export async function deleteCategory(id: string) {
     return { success: true };
   } catch (error) {
     return { success: false, error: "เกิดข้อผิดพลาดในการลบข้อมูล" };
+  }
+}
+
+export async function updateCategory(id: string, formData: { name: string; description?: string }) {
+  try {
+    if (!formData.name) return { success: false, error: "กรุณากรอกชื่อหมวดหมู่" };
+    await prisma.category.update({ 
+      where: { id }, 
+      data: { name: formData.name, description: formData.description } 
+    });
+    revalidatePath("/categories");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "ไม่สามารถอัปเดตข้อมูลได้" };
   }
 }

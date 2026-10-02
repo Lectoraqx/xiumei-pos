@@ -160,12 +160,6 @@ export default function SuppliersClient({ initialSuppliers }: { initialSuppliers
                   <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:border-[#E85D75] focus:outline-none" placeholder="08X-XXX-XXXX" />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
-                <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:border-[#E85D75] focus:outline-none" placeholder="example@domain.com" />
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><MapPin size={14}/> ที่อยู่จัดส่ง / ที่ตั้ง</label>
                 <textarea rows={3} value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:border-[#E85D75] focus:outline-none resize-none" placeholder="รายละเอียดที่อยู่..." />
