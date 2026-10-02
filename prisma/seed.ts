@@ -90,8 +90,9 @@ async function main() {
   for (let i = 1; i <= 10; i++) {
     await prisma.customer.create({
       data: {
-        name: `ลูกค้าคนที่ ${i}`, phone: `08100000${i.toString().padStart(2, '0')}`,
-        memberTier: i > 8 ? MemberTier.PLATINUM : i > 5 ? MemberTier.GOLD : MemberTier.GENERAL,
+        name: `ลูกค้าคนที่ ${i}`, 
+        phone: `08100000${i.toString().padStart(2, '0')}`,
+        tier: i > 8 ? MemberTier.PLATINUM : i > 5 ? MemberTier.GOLD : MemberTier.GENERAL, // <--- แก้จาก memberTier เป็น tier
         points: Math.floor(Math.random() * 500)
       }
     });
