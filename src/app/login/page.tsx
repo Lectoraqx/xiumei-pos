@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { IceCream, Loader2, Lock, Mail } from "lucide-react";
 
@@ -10,27 +9,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // เรียกใช้ฟังก์ชัน signIn ของ NextAuth
+    // เรียกใช้ฟังก์ชัน signIn ของ NextAuth แบบไม่ redirect ทันที เพื่อดักจับ Error
     const res = await signIn("credentials", {
       email,
       password,
-      redirect: false, // ป้องกันไม่ให้หน้าเว็บรีเฟรชอัตโนมัติ เพื่อให้เราจัดการ Toast ได้
+      redirect: false, 
     });
-
-    setIsSubmitting(false);
 
     if (res?.error) {
       toast.error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      setIsSubmitting(false);
     } else if (res?.ok) {
       toast.success("เข้าสู่ระบบสำเร็จ!");
-      router.push("/dashboard"); // ส่งไปหน้าแดชบอร์ด
-      router.refresh(); // รีเฟรชเพื่อให้ Layout ดึงข้อมูล Session ใหม่
+      // ใช้ window.location.href เพื่อบังคับเบราว์เซอร์โหลดหน้าใหม่ 
+      // เป็นการเคลียร์แคชและอัปเดต Session 100%
+      window.location.href = "/dashboard";
     }
   };
 

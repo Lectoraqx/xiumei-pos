@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Store,
@@ -93,7 +94,7 @@ export default function Sidebar({ session, isOpen, setIsOpen }: { session: any; 
         {/* Menu List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar py-4 px-3 space-y-6">
           {menuGroups.map((group, index) => {
-            // กรองเมนูตามสิทธิ์การเข้าถึง (ใช้ ?. เพื่อป้องกัน Error 18048)
+            // กรองเมนูตามสิทธิ์การเข้าถึง
             const allowedItems = group.items.filter(
               (item) => !item.roles || item.roles?.includes(userRole)
             );
@@ -144,10 +145,16 @@ export default function Sidebar({ session, isOpen, setIsOpen }: { session: any; 
               <p className="text-[10px] text-gray-400 uppercase tracking-wider">{userRole}</p>
             </div>
           </div>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors">
+          
+          {/* ปุ่มออกจากระบบ (เพิ่มฟังก์ชัน signOut แล้ว) */}
+          <button 
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors text-left"
+          >
             <LogOut size={18} />
             ออกจากระบบ
           </button>
+          
         </div>
       </aside>
     </>
